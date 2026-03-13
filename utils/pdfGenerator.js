@@ -30,10 +30,9 @@ function generatePDF(logs, startDate, endDate, employeeName = null) {
       doc.text('No attendance records found for the selected period.');
     } else {
       // Table header
-      const col = { name: 60, id: 200, status: 290, date: 370, time: 470 };
+      const col = { name: 60, status: 220, date: 320, time: 420 };
       doc.fontSize(11).font('Helvetica-Bold');
       doc.text('Employee', col.name, doc.y);
-      doc.text('ID', col.id, doc.y - doc.currentLineHeight());
       doc.text('Status', col.status, doc.y - doc.currentLineHeight());
       doc.text('Date', col.date, doc.y - doc.currentLineHeight());
       doc.text('Time', col.time, doc.y - doc.currentLineHeight());
@@ -46,8 +45,7 @@ function generatePDF(logs, startDate, endDate, employeeName = null) {
       for (const log of logs) {
         const ts = moment(log.timestamp).tz('Asia/Kolkata');
         const y = doc.y;
-        doc.text(log.employee?.name || '—', col.name, y, { width: 130 });
-        doc.text(log.employee?.employee_id || '—', col.id, y, { width: 80 });
+        doc.text(log.employee?.name || '—', col.name, y, { width: 140 });
         doc.text(log.status, col.status, y, { width: 75 });
         doc.text(ts.format('YYYY-MM-DD'), col.date, y, { width: 90 });
         doc.text(ts.format('HH:mm:ss'), col.time, y, { width: 70 });

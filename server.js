@@ -1,4 +1,13 @@
 require('dotenv').config();
+
+// Polyfill for deprecated util.isNullOrUndefined used by @tensorflow/tfjs-node in newer Node versions
+const util = require('util');
+if (!util.isNullOrUndefined) {
+  util.isNullOrUndefined = function (obj) {
+    return obj === null || obj === undefined;
+  };
+}
+
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');

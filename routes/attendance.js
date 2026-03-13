@@ -20,18 +20,26 @@ function getDistance(lat1, lon1, lat2, lon2) {
 
 // POST /api/submit-attendance/
 router.post('/submit-attendance/', async (req, res) => {
-  const { employee_id, image, latitude, longitude, action = 'checkin' } = req.body;
+  const { image, latitude, longitude, action = 'checkin' } = req.body;
 
-  if (!employee_id || !image || latitude == null || longitude == null) {
+  if (!image || latitude == null || longitude == null) {
     return res.status(400).json({ status: 'failed', message: 'Missing required fields' });
   }
 
   try {
-    // 1. Find employee
-    const employee = await Employee.findOne({ employee_id });
-    if (!employee) {
-      return res.json({ status: 'failed', message: 'Employee not found', timestamp: moment().tz('Asia/Kolkata').format('YYYY-MM-DD HH:mm:ss') });
+    // 1. Face recognition
+    const descriptor = await getDescriptor(image);
+    if (!descriptor) {
+      return res.json({ status: 'failed', message: 'No face detected in the image', timestamp: moment().tz('Asia/Kolkata').format('YYYY-MM-DD HH:mm:ss') });
     }
+
+    const allEmployees = await Employee.find({ face_descriptor: { $exists: true, $ne: [] } });
+    const match = findMatch(descriptor, allEmployees);
+    if (!match) {
+      return res.json({ status: 'failed', message: 'Face not recognized. Please try again.', timestamp: moment().tz('Asia/Kolkata').format('YYYY-MM-DD HH:mm:ss') });
+    }
+
+    const employee = match;
 
     // 2. Geofence check
     const window = await AttendanceWindow.findOne();
@@ -41,20 +49,6 @@ router.post('/submit-attendance/', async (req, res) => {
         await AttendanceLog.create({ employee: employee._id, status: 'FAILED', failure_reason: `Out of range (${Math.round(distance)}m away)` });
         return res.json({ status: 'failed', message: `You are outside the allowed area (${Math.round(distance / 1000, 1)}km away)`, timestamp: moment().tz('Asia/Kolkata').format('YYYY-MM-DD HH:mm:ss') });
       }
-    }
-
-    // 3. Face recognition
-    const descriptor = await getDescriptor(image);
-    if (!descriptor) {
-      await AttendanceLog.create({ employee: employee._id, status: 'FAILED', failure_reason: 'No face detected in image' });
-      return res.json({ status: 'failed', message: 'No face detected in the image', timestamp: moment().tz('Asia/Kolkata').format('YYYY-MM-DD HH:mm:ss') });
-    }
-
-    const allEmployees = await Employee.find({ face_descriptor: { $exists: true, $ne: [] } });
-    const match = findMatch(descriptor, allEmployees);
-    if (!match || match.employee_id !== employee_id) {
-      await AttendanceLog.create({ employee: employee._id, status: 'FAILED', failure_reason: 'Face verification failed' });
-      return res.json({ status: 'failed', message: 'Face verification failed. Please try again.', timestamp: moment().tz('Asia/Kolkata').format('YYYY-MM-DD HH:mm:ss') });
     }
 
     // 4. Once-per-day check (IST)
@@ -92,7 +86,7 @@ router.post('/submit-attendance/', async (req, res) => {
 
 // GET /api/attendance-logs/
 router.get('/attendance-logs/', async (req, res) => {
-  const { start_date, end_date, employee_id } = req.query;
+  const { start_date, end_date, employeeId } = req.query;
   if (!start_date || !end_date) return res.status(400).json({ error: 'start_date and end_date required' });
 
   try {
@@ -100,16 +94,14 @@ router.get('/attendance-logs/', async (req, res) => {
     const endIST = moment.tz(end_date, 'YYYY-MM-DD', 'Asia/Kolkata').endOf('day').toDate();
 
     let query = { timestamp: { $gte: startIST, $lte: endIST } };
-    if (employee_id) {
-      const emp = await Employee.findOne({ employee_id });
-      if (emp) query.employee = emp._id;
+    if (employeeId) {
+      query.employee = employeeId;
     }
 
     const logs = await AttendanceLog.find(query).populate('employee').sort({ timestamp: -1 });
     const data = logs.map(log => ({
       id: log._id,
       employee_name: log.employee?.name || '—',
-      employee_id: log.employee?.employee_id || '—',
       status: log.status,
       timestamp: moment(log.timestamp).tz('Asia/Kolkata').format('YYYY-MM-DD HH:mm:ss'),
       failure_reason: log.failure_reason || '',
@@ -140,11 +132,11 @@ router.get('/attendance-report/', async (req, res) => {
 
 // GET /api/attendance-employee-pdf/ — single employee PDF
 router.get('/attendance-employee-pdf/', async (req, res) => {
-  const { start_date, end_date, employee_id } = req.query;
-  if (!start_date || !end_date || !employee_id) return res.status(400).json({ error: 'start_date, end_date, and employee_id required' });
+  const { start_date, end_date, employeeId } = req.query;
+  if (!start_date || !end_date || !employeeId) return res.status(400).json({ error: 'start_date, end_date, and employeeId required' });
 
   try {
-    const emp = await Employee.findOne({ employee_id });
+    const emp = await Employee.findById(employeeId);
     if (!emp) return res.status(404).json({ error: 'Employee not found' });
 
     const startIST = moment.tz(start_date, 'YYYY-MM-DD', 'Asia/Kolkata').startOf('day').toDate();

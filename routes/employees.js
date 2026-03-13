@@ -12,7 +12,6 @@ router.get('/', async (req, res) => {
     const data = employees.map(emp => ({
       id: emp._id,
       name: emp.name,
-      employee_id: emp.employee_id,
       profile_picture: emp.profile_picture || null,
     }));
     res.json(data);
@@ -24,8 +23,8 @@ router.get('/', async (req, res) => {
 // POST /api/employees/ — create employee
 router.post('/', upload.single('profile_picture'), async (req, res) => {
   try {
-    const { name, employee_id } = req.body;
-    if (!name || !employee_id) return res.status(400).json({ error: 'Name and employee_id are required' });
+    const { name } = req.body;
+    if (!name) return res.status(400).json({ error: 'Name is required' });
 
     let profile_picture = '';
     let face_descriptor = [];
@@ -42,15 +41,13 @@ router.post('/', upload.single('profile_picture'), async (req, res) => {
       return res.status(400).json({ error: 'Profile picture is required' });
     }
 
-    const emp = await Employee.create({ name, employee_id, profile_picture, face_descriptor });
+    const emp = await Employee.create({ name, profile_picture, face_descriptor });
     res.status(201).json({
       id: emp._id,
       name: emp.name,
-      employee_id: emp.employee_id,
       profile_picture: emp.profile_picture,
     });
   } catch (err) {
-    if (err.code === 11000) return res.status(400).json({ error: 'Employee ID already exists' });
     res.status(500).json({ error: err.message });
   }
 });
@@ -60,7 +57,7 @@ router.get('/:id/', async (req, res) => {
   try {
     const emp = await Employee.findById(req.params.id).select('-face_descriptor');
     if (!emp) return res.status(404).json({ error: 'Employee not found' });
-    res.json({ id: emp._id, name: emp.name, employee_id: emp.employee_id, profile_picture: emp.profile_picture });
+    res.json({ id: emp._id, name: emp.name, profile_picture: emp.profile_picture });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -69,10 +66,9 @@ router.get('/:id/', async (req, res) => {
 // PUT /api/employees/:id/ — update employee
 router.put('/:id/', upload.single('profile_picture'), async (req, res) => {
   try {
-    const { name, employee_id } = req.body;
+    const { name } = req.body;
     const updateData = {};
     if (name) updateData.name = name;
-    if (employee_id) updateData.employee_id = employee_id;
 
     if (req.file) {
       updateData.profile_picture = await uploadToCloudinary(req.file.buffer, 'nizan_employees');
@@ -82,7 +78,7 @@ router.put('/:id/', upload.single('profile_picture'), async (req, res) => {
 
     const emp = await Employee.findByIdAndUpdate(req.params.id, updateData, { new: true }).select('-face_descriptor');
     if (!emp) return res.status(404).json({ error: 'Employee not found' });
-    res.json({ id: emp._id, name: emp.name, employee_id: emp.employee_id, profile_picture: emp.profile_picture });
+    res.json({ id: emp._id, name: emp.name, profile_picture: emp.profile_picture });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
