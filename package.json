@@ -9,8 +9,7 @@
   },
   "dependencies": {
     "@tensorflow/tfjs-node": "^4.22.0",
-    "@vladmandic/face-api": "^3.4.0",
-    "canvas": "^2.11.2",
+    "@vladmandic/face-api": "^1.7.15",
     "cloudinary": "^2.5.1",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",

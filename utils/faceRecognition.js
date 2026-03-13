@@ -1,10 +1,6 @@
 const tf = require('@tensorflow/tfjs-node');
 const faceapi = require('@vladmandic/face-api');
-const { Canvas, Image, ImageData, loadImage } = require('canvas');
 const path = require('path');
-
-// Patch faceapi for Node.js
-faceapi.env.monkeyPatch({ Canvas, Image, ImageData });
 
 const MODEL_PATH = path.join(
   __dirname, '..', 'node_modules', '@vladmandic', 'face-api', 'model'
@@ -21,26 +17,38 @@ async function initFaceApi() {
 }
 
 /**
- * Get a 128-float face descriptor from an image buffer or base64 data URL.
+ * Decode image input to a tf.Tensor3D.
+ * Accepts a Buffer, base64 data URL string, or raw base64 string.
+ */
+function decodeToTensor(imageInput) {
+  let buffer;
+  if (Buffer.isBuffer(imageInput)) {
+    buffer = imageInput;
+  } else if (typeof imageInput === 'string') {
+    const base64 = imageInput.replace(/^data:image\/\w+;base64,/, '');
+    buffer = Buffer.from(base64, 'base64');
+  } else {
+    throw new Error('Unsupported image input type');
+  }
+  // Decode to RGB tensor (3 channels)
+  return tf.node.decodeImage(buffer, 3);
+}
+
+/**
+ * Get a 128-float face descriptor from an image.
  * Returns Float32Array or null if no face detected.
  */
 async function getDescriptor(imageInput) {
-  let img;
-  if (typeof imageInput === 'string') {
-    // Strip data URL prefix if present
-    const base64 = imageInput.replace(/^data:image\/\w+;base64,/, '');
-    const buffer = Buffer.from(base64, 'base64');
-    img = await loadImage(buffer);
-  } else {
-    img = await loadImage(imageInput);
+  const tensor = decodeToTensor(imageInput);
+  try {
+    const detection = await faceapi
+      .detectSingleFace(tensor)
+      .withFaceLandmarks()
+      .withFaceDescriptor();
+    return detection ? detection.descriptor : null;
+  } finally {
+    tensor.dispose();
   }
-
-  const detection = await faceapi
-    .detectSingleFace(img)
-    .withFaceLandmarks()
-    .withFaceDescriptor();
-
-  return detection ? detection.descriptor : null;
 }
 
 /**

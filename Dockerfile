@@ -1,15 +1,9 @@
 FROM node:20-slim
 
-# Install system libraries needed for canvas (face-api.js) and tensorflow
+# Only build-essential and python3 needed for @tensorflow/tfjs-node native binding
 RUN apt-get update && apt-get install -y \
     build-essential \
     python3 \
-    pkg-config \
-    libcairo2-dev \
-    libpango1.0-dev \
-    libjpeg-dev \
-    libgif-dev \
-    librsvg2-dev \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
