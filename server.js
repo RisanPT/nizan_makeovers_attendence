@@ -41,16 +41,20 @@ async function start() {
     await initFaceApi();
     console.log('✅ Face API models loaded');
 
-    // Seed attendance window
+    // Seed or update attendance window
     const AttendanceWindow = require('./models/AttendanceWindow');
     const existing = await AttendanceWindow.findOne();
     if (!existing) {
       await AttendanceWindow.create({
         latitude: 11.2481,
         longitude: 75.8348,
-        radius_meters: 10000,
+        radius_meters: 500,
       });
-      console.log('✅ Attendance window seeded (Nizan Makeovers, 10 KM)');
+      console.log('✅ Attendance window seeded (Nizan Makeovers, 500 M)');
+    } else if (existing.radius_meters !== 500) {
+      existing.radius_meters = 500;
+      await existing.save();
+      console.log('✅ Attendance window updated to 500 M');
     }
 
     app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));

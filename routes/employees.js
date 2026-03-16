@@ -16,7 +16,8 @@ router.get('/', async (req, res) => {
     }));
     res.json(data);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('❌ Employee route error:', err);
+    res.status(500).json({ error: err.message, detail: err.stack });
   }
 });
 
@@ -48,7 +49,8 @@ router.post('/', upload.single('profile_picture'), async (req, res) => {
       profile_picture: emp.profile_picture,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('❌ Employee route error:', err);
+    res.status(500).json({ error: err.message, detail: err.stack });
   }
 });
 
@@ -59,7 +61,8 @@ router.get('/:id/', async (req, res) => {
     if (!emp) return res.status(404).json({ error: 'Employee not found' });
     res.json({ id: emp._id, name: emp.name, profile_picture: emp.profile_picture });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('❌ Employee route error:', err);
+    res.status(500).json({ error: err.message, detail: err.stack });
   }
 });
 
@@ -80,7 +83,8 @@ router.put('/:id/', upload.single('profile_picture'), async (req, res) => {
     if (!emp) return res.status(404).json({ error: 'Employee not found' });
     res.json({ id: emp._id, name: emp.name, profile_picture: emp.profile_picture });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('❌ Employee route error:', err);
+    res.status(500).json({ error: err.message, detail: err.stack });
   }
 });
 
@@ -91,7 +95,8 @@ router.delete('/:id/', async (req, res) => {
     if (!emp) return res.status(404).json({ error: 'Employee not found' });
     res.status(204).send();
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('❌ Employee route error:', err);
+    res.status(500).json({ error: err.message, detail: err.stack });
   }
 });
 
